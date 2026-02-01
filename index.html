@@ -123,12 +123,17 @@
 
     /* NO — спочатку як звичайна кнопка (біля YES) */
     #no{
-      font-size: calc(var(--yes-size) * var(--no-mult) / 5); 
-      padding: 6px 12px;                                     
+      font-size: 8px;            /* жорстко маленький текст */
+      padding: 3px 6px;          /* жорстко маленькі відступи */
+      border-width: 1px;         /* тонша рамка */
+      border-style: solid;
+      border-color: rgba(177,0,75,0.25);
+
       background: linear-gradient(135deg, #ffffff 0%, #ffe3f2 100%);
       color: #b1004b;
-      border: 2px solid rgba(177,0,75,0.25);
-      z-index: 9999;
+
+      box-shadow: 0 4px 10px rgba(125, 0, 60, 0.18); /* менша тінь */
+      z-index: 99999;
     }
 
     /* -------- Popup (5 seconds every 7 hovers) -------- */
@@ -222,8 +227,8 @@
       if (!noIsAbsolute) return;
 
       // радіус 2–3 розміри кнопки від бази
-      const rx = noBtn.offsetWidth  * (2 + Math.random()) * 4;
-      const ry = noBtn.offsetHeight * (2 + Math.random()) * 4;
+      const rx = noBtn.offsetWidth  * (2 + Math.random()) * 10;
+      const ry = noBtn.offsetHeight * (2 + Math.random()) * 10;
 
       const dx = (Math.random() - 0.5) * rx;
       const dy = (Math.random() - 0.5) * ry;
