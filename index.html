@@ -7,8 +7,9 @@
 
   <style>
     :root{
-      --yes-size: 22px;   /* YES text size */
-      --no-mult: 1.5;     /* NO = 1.5x YES */
+      --yes-size: 22px;
+      --no-mult: 1.5;
+      --gap: 16px;
     }
 
     * { box-sizing: border-box; }
@@ -64,7 +65,7 @@
 
     .card{
       width: min(720px, 92vw);
-      padding: 28px 22px;
+      padding: 28px 22px 34px;
       text-align: center;
       background: rgba(255,255,255,0.55);
       border: 1px solid rgba(255,255,255,0.7);
@@ -87,11 +88,16 @@
       opacity: 0.85;
     }
 
+    /* кнопкова арена */
     .btn-row{
-      position: relative;          /* важливо для absolute NO */
-      display: inline-block;       /* щоб область була компактна */
-      height: 110px;
-      width: min(520px, 88vw);     /* простір для руху біля YES */
+      position: relative;      /* для absolute NO */
+      width: min(520px, 88vw);
+      height: 120px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--gap);
     }
 
     button{
@@ -102,16 +108,11 @@
       user-select: none;
       box-shadow: 0 10px 26px rgba(125, 0, 60, 0.22);
       transition: transform 120ms ease, filter 120ms ease;
-      position: relative;
     }
     button:active{ transform: translateY(1px) scale(0.99); }
 
-    /* YES — big, static (по центру області кнопок) */
+    /* YES — статична */
     #yes{
-      position: absolute;
-      left: 50%;
-      top: 55%;
-      transform: translate(-50%, -50%);
       font-size: var(--yes-size);
       padding: 14px 44px;
       background: linear-gradient(135deg, #ff2e93 0%, #ff5fb2 60%, #ff88c6 100%);
@@ -120,15 +121,14 @@
     }
     #yes:hover{ filter: brightness(1.03); }
 
-    /* NO — 1.5x of YES, moves near YES */
+    /* NO — спочатку як звичайна кнопка (біля YES) */
     #no{
-      position: absolute; /* 🔥 замість fixed */
       font-size: calc(var(--yes-size) * var(--no-mult));
       padding: 16px 34px;
       background: linear-gradient(135deg, #ffffff 0%, #ffe3f2 100%);
       color: #b1004b;
       border: 2px solid rgba(177,0,75,0.25);
-      z-index: 999;       /* 🔥 завжди поверх (всередині card) */
+      z-index: 999; /* буде поверх в середині card */
     }
 
     /* -------- Popup (5 seconds every 7 hovers) -------- */
@@ -177,7 +177,7 @@
     </div>
   </div>
 
-  <!-- 5-second popup (shows every 7 NO hovers) -->
+  <!-- 5-second popup every 7 NO hovers -->
   <div class="popup-overlay" id="popup" role="dialog" aria-modal="true">
     <div class="popup">
       <img src="lera.webp" alt="Lera" />
@@ -190,39 +190,37 @@
     const noBtn  = document.getElementById("no");
     const popup  = document.getElementById("popup");
 
-    let baseX = 0, baseY = 0;       // базові координати NO (поруч з YES) у межах arena
+    let baseX = 0, baseY = 0;     // базові координати NO (біля YES)
     let hoverAttempts = 0;
     let popupTimer = null;
+    let noIsAbsolute = false;
 
     function clamp(n, min, max) {
       return Math.max(min, Math.min(max, n));
     }
 
-    function setNoBaseNearYes() {
+    // 1) Знімаємо реальну позицію NO коли вона стоїть "нормально" біля YES
+    // 2) Переводимо її в absolute і ставимо ТОЧНО в те саме місце
+    function lockNoToItsCurrentPlace() {
       const a = arena.getBoundingClientRect();
-      const y = yesBtn.getBoundingClientRect();
+      const n = noBtn.getBoundingClientRect();
 
-      // Координати YES відносно arena
-      const yesLeft = y.left - a.left;
-      const yesTop  = y.top  - a.top;
+      // координати NO відносно arena
+      baseX = n.left - a.left;
+      baseY = n.top  - a.top;
 
-      // Поставити NO праворуч від YES по центру по висоті
-      baseX = yesLeft + yesBtn.offsetWidth + 16;
-      baseY = yesTop  + (yesBtn.offsetHeight - noBtn.offsetHeight) / 2;
-
-      // Якщо не влазить праворуч — ставимо ліворуч
-      if (baseX + noBtn.offsetWidth > arena.clientWidth - 6) {
-        baseX = yesLeft - noBtn.offsetWidth - 16;
-      }
-
-      baseX = clamp(baseX, 6, arena.clientWidth  - noBtn.offsetWidth  - 6);
-      baseY = clamp(baseY, 6, arena.clientHeight - noBtn.offsetHeight - 6);
-
+      // робимо absolute тільки після того, як зняли координати
+      noBtn.style.position = "absolute";
       noBtn.style.left = baseX + "px";
       noBtn.style.top  = baseY + "px";
+      noBtn.style.zIndex = "9999"; // завжди поверх всередині арени
+
+      noIsAbsolute = true;
     }
 
     function moveNoNearby() {
+      if (!noIsAbsolute) return;
+
       // радіус 2–3 розміри кнопки від бази
       const rx = noBtn.offsetWidth  * (2 + Math.random()); // 2..3
       const ry = noBtn.offsetHeight * (2 + Math.random());
@@ -243,8 +241,8 @@
 
     function showPopupFor5s() {
       if (popupTimer) return;
-      popup.classList.add("show");
 
+      popup.classList.add("show");
       popupTimer = setTimeout(() => {
         popup.classList.remove("show");
         popupTimer = null;
@@ -271,19 +269,32 @@
       window.alert("You know who to text 😉");
     });
 
-    // Важливо: 2 кадри requestAnimationFrame, щоб кнопки точно мали правильні розміри
-    function initPositions() {
+    // Надійна ініціалізація: чекаємо повний layout
+    function init() {
+      // Спочатку NO стоїть у flex-рядку біля YES (static)
+      // Після 2-х frame — переводимо в absolute рівно в тому ж місці
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          setNoBaseNearYes();
+          lockNoToItsCurrentPlace();
         });
       });
     }
 
-    window.addEventListener("load", initPositions);
-    window.addEventListener("resize", initPositions);
+    window.addEventListener("load", init);
 
-    // Decorative hearts
+    // При ресайзі повертаємо NO в рядок і заново фіксуємо біля YES
+    window.addEventListener("resize", () => {
+      // повертаємо тимчасово в normal flow
+      noIsAbsolute = false;
+      noBtn.style.position = "static";
+      noBtn.style.left = "";
+      noBtn.style.top = "";
+
+      // після перерахунку знову “зафіксувати” біля YES
+      init();
+    });
+
+    // Hearts
     const hearts = document.getElementById("hearts");
     const HEARTS_COUNT = 18;
     for (let i = 0; i < HEARTS_COUNT; i++) {
