@@ -92,6 +92,7 @@
       align-items: center;
       position: relative;
       padding: 18px 0 6px;
+      min-height: 90px; /* щоб кнопки не стрибали по висоті */
     }
 
     button{
@@ -114,72 +115,52 @@
     }
     #yes:hover{ filter: brightness(1.03); }
 
-    /* NO — 1.5x of YES, moves */
+    /* NO — 1.5x of YES, runs around the screen */
     #no{
-      position: absolute;
+      position: fixed; /* ключ: бігає по всьому екрану */
       font-size: calc(var(--yes-size) * var(--no-mult));
       padding: 16px 30px;
       background: linear-gradient(135deg, #ffffff 0%, #ffe3f2 100%);
       color: #b1004b;
       border: 2px solid rgba(177,0,75,0.25);
+      z-index: 3;
     }
 
-    /* -------- Modal -------- */
-    .modal-overlay{
+    /* -------- Popup (5 seconds) -------- */
+    .popup-overlay{
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.45);
       display: none;
       place-items: center;
-      padding: 16px;
+      background: rgba(0,0,0,0.35);
       z-index: 999;
+      padding: 16px;
     }
-    .modal-overlay.show{ display: grid; }
+    .popup-overlay.show{ display: grid; }
 
-    .modal{
-      width: min(520px, 92vw);
+    .popup{
+      width: min(420px, 92vw);
       background: rgba(255,255,255,0.92);
       border: 1px solid rgba(255,255,255,0.85);
       border-radius: 20px;
       box-shadow: 0 25px 80px rgba(0,0,0,0.25);
-      padding: 18px;
-      backdrop-filter: blur(10px);
+      padding: 16px;
       text-align: center;
+      backdrop-filter: blur(10px);
     }
-
-    .modal img{
+    .popup img{
       width: min(280px, 70vw);
       height: auto;
       border-radius: 16px;
       box-shadow: 0 14px 30px rgba(125, 0, 60, 0.22);
       display: block;
-      margin: 8px auto 14px;
+      margin: 6px auto 8px;
     }
-
-    .modal h2{
-      margin: 0 0 12px;
-      font-size: 22px;
+    .popup p{
+      margin: 8px 0 0;
+      font-weight: 700;
       color: #4a0d2a;
-    }
-
-    .modal-actions{
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      margin-top: 10px;
-      flex-wrap: wrap;
-    }
-
-    .btn-ok{
-      background: linear-gradient(135deg, #ff2e93 0%, #ff5fb2 60%, #ff88c6 100%);
-      color: white;
-      padding: 12px 22px;
-    }
-    .btn-cancel{
-      background: #fff;
-      color: #b1004b;
-      border: 2px solid rgba(177,0,75,0.25);
-      padding: 12px 22px;
+      opacity: 0.9;
     }
   </style>
 </head>
@@ -193,40 +174,33 @@
 
     <div class="btn-row">
       <button id="yes" type="button">YES</button>
+      <!-- NO is position:fixed and will be placed by JS -->
       <button id="no" type="button">NO</button>
     </div>
   </div>
 
-  <!-- Modal -->
-  <div class="modal-overlay" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="modal">
-      <img src="lera.webp" alt="Photo" />
-      <h2 id="modalTitle">Is this your wish?</h2>
-      <div class="modal-actions">
-        <button class="btn-ok" id="modalOk" type="button">Yes, absolutely 💖</button>
-        <button class="btn-cancel" id="modalClose" type="button">Close</button>
-      </div>
+  <!-- 5-second popup (shows every 7 NO hovers) -->
+  <div class="popup-overlay" id="popup" role="dialog" aria-modal="true">
+    <div class="popup">
+      <img src="lera.webp" alt="Lera" />
+      <p>😈</p>
     </div>
   </div>
 
   <script>
     const noBtn = document.getElementById("no");
     const yesBtn = document.getElementById("yes");
+    const popup = document.getElementById("popup");
 
-    const modal = document.getElementById("modal");
-    const modalClose = document.getElementById("modalClose");
-    const modalOk = document.getElementById("modalOk");
+    let hoverAttempts = 0;
+    let popupTimer = null;
 
-    function placeNoNearYes() {
-      const yesRect = yesBtn.getBoundingClientRect();
-      const left = Math.min(window.innerWidth - noBtn.offsetWidth - 10, yesRect.right + 16);
-      const top  = Math.min(window.innerHeight - noBtn.offsetHeight - 10, yesRect.top);
-      noBtn.style.left = `${Math.max(10, left)}px`;
-      noBtn.style.top  = `${Math.max(10, top)}px`;
+    function clamp(n, min, max) {
+      return Math.max(min, Math.min(max, n));
     }
 
     function moveNoRandom() {
-      const padding = 12;
+      const padding = 16;
       const maxX = window.innerWidth  - noBtn.offsetWidth  - padding;
       const maxY = window.innerHeight - noBtn.offsetHeight - padding;
 
@@ -237,39 +211,53 @@
       noBtn.style.top  = `${y}px`;
     }
 
-    noBtn.addEventListener("mouseenter", moveNoRandom);
-    noBtn.addEventListener("touchstart", (e) => {
-      e.preventDefault();
-      moveNoRandom();
-    }, { passive: false });
+    function showPopupFor5s() {
+      // prevent stacking timers
+      if (popupTimer) return;
 
-    // YES -> open modal with photo + question (English)
-    yesBtn.addEventListener("click", () => {
-      modal.classList.add("show");
-    });
+      popup.classList.add("show");
 
-    function closeModal() {
-      modal.classList.remove("show");
+      popupTimer = setTimeout(() => {
+        popup.classList.remove("show");
+        popupTimer = null;
+      }, 5000);
     }
 
-    modalClose.addEventListener("click", closeModal);
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) closeModal(); // click outside modal box
-    });
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeModal();
-    });
-      
-    modalOk.addEventListener("click", () => {
-      closeModal();
+    function onNoHover() {
+      moveNoRandom();
+
+      hoverAttempts += 1;
+
+      // every 7 attempts -> show popup, then reset counter
+      if (hoverAttempts >= 7) {
+        hoverAttempts = 0;
+        showPopupFor5s();
+      }
+    }
+
+    // NO runs away on hover (and touch)
+    noBtn.addEventListener("mouseenter", onNoHover);
+    noBtn.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      onNoHover();
+    }, { passive: false });
+
+    // YES message box
+    yesBtn.addEventListener("click", () => {
+      window.alert("You know who to text 😉");
     });
 
+    // initial placement
     window.addEventListener("load", () => {
-      placeNoNearYes();
-      setTimeout(moveNoRandom, 250);
+      moveNoRandom();
     });
-    window.addEventListener("resize", placeNoNearYes);
 
+    // keep inside on resize
+    window.addEventListener("resize", () => {
+      moveNoRandom();
+    });
+
+    // Decorative hearts
     const hearts = document.getElementById("hearts");
     const HEARTS_COUNT = 18;
     for (let i = 0; i < HEARTS_COUNT; i++) {
