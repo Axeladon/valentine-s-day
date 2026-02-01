@@ -7,8 +7,8 @@
 
   <style>
     :root{
-      --yes-size: 22px;
-      --no-mult: 1.5;
+      --yes-size: 22px;   /* YES text size */
+      --no-mult: 1.5;     /* NO = 1.5x YES */
     }
 
     * { box-sizing: border-box; }
@@ -21,14 +21,53 @@
       display: grid;
       place-items: center;
       color: #4a0d2a;
-      background: linear-gradient(135deg, #ffe0ef, #ffb6d5);
+
+      background:
+        radial-gradient(1200px 600px at 20% 15%, rgba(255,105,180,0.35), transparent 55%),
+        radial-gradient(900px 500px at 80% 20%, rgba(255,0,102,0.25), transparent 60%),
+        radial-gradient(800px 500px at 50% 90%, rgba(255,182,193,0.45), transparent 60%),
+        linear-gradient(135deg, #fff0f6 0%, #ffd1e8 40%, #ffb3d9 100%);
+    }
+
+    /* floating hearts */
+    .hearts{
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.35;
+      z-index: 0;
+    }
+    .heart{
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      transform: rotate(45deg);
+      background: rgba(255, 20, 147, 0.75);
+      border-radius: 4px;
+      animation: floatUp linear infinite;
+    }
+    .heart::before,
+    .heart::after{
+      content:"";
+      position:absolute;
+      width: 18px;
+      height: 18px;
+      background: inherit;
+      border-radius: 50%;
+    }
+    .heart::before{ left: -9px; top: 0; }
+    .heart::after{ left: 0; top: -9px; }
+    @keyframes floatUp{
+      from { transform: translateY(20vh) rotate(45deg); }
+      to   { transform: translateY(-120vh) rotate(45deg); }
     }
 
     .card{
       width: min(720px, 92vw);
-      padding: 32px 22px 40px;
+      padding: 28px 22px;
       text-align: center;
-      background: rgba(255,255,255,0.65);
+      background: rgba(255,255,255,0.55);
+      border: 1px solid rgba(255,255,255,0.7);
       border-radius: 22px;
       backdrop-filter: blur(10px);
       box-shadow: 0 20px 60px rgba(125, 0, 60, 0.18);
@@ -37,21 +76,22 @@
     }
 
     h1{
-      margin: 0 0 16px;
+      margin: 0 0 18px;
       font-size: clamp(28px, 4vw, 44px);
+      letter-spacing: 0.3px;
     }
 
     .sub{
-      margin-bottom: 28px;
+      margin: 0 0 22px;
+      font-size: clamp(14px, 2.2vw, 18px);
       opacity: 0.85;
     }
 
     .btn-row{
-      position: relative;
-      display: flex;
-      justify-content: center;
-      gap: 18px;
-      height: 90px;
+      position: relative;          /* важливо для absolute NO */
+      display: inline-block;       /* щоб область була компактна */
+      height: 110px;
+      width: min(520px, 88vw);     /* простір для руху біля YES */
     }
 
     button{
@@ -59,85 +99,206 @@
       border-radius: 999px;
       font-weight: 800;
       cursor: pointer;
-      box-shadow: 0 10px 26px rgba(125, 0, 60, 0.22);
-      transition: transform 120ms ease;
       user-select: none;
+      box-shadow: 0 10px 26px rgba(125, 0, 60, 0.22);
+      transition: transform 120ms ease, filter 120ms ease;
+      position: relative;
     }
+    button:active{ transform: translateY(1px) scale(0.99); }
 
+    /* YES — big, static (по центру області кнопок) */
     #yes{
+      position: absolute;
+      left: 50%;
+      top: 55%;
+      transform: translate(-50%, -50%);
       font-size: var(--yes-size);
-      padding: 16px 42px;
-      background: linear-gradient(135deg, #ff2e93, #ff77b7);
+      padding: 14px 44px;
+      background: linear-gradient(135deg, #ff2e93 0%, #ff5fb2 60%, #ff88c6 100%);
       color: white;
       z-index: 2;
     }
+    #yes:hover{ filter: brightness(1.03); }
 
+    /* NO — 1.5x of YES, moves near YES */
     #no{
-      position: fixed;                 /* щоб не ховалась */
+      position: absolute; /* 🔥 замість fixed */
       font-size: calc(var(--yes-size) * var(--no-mult));
-      padding: 18px 46px;
-      background: #fff;
+      padding: 16px 34px;
+      background: linear-gradient(135deg, #ffffff 0%, #ffe3f2 100%);
       color: #b1004b;
       border: 2px solid rgba(177,0,75,0.25);
-      z-index: 9999;                   /* 🔥 завжди поверх */
+      z-index: 999;       /* 🔥 завжди поверх (всередині card) */
+    }
+
+    /* -------- Popup (5 seconds every 7 hovers) -------- */
+    .popup-overlay{
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      background: rgba(0,0,0,0.35);
+      z-index: 9999;
+      padding: 16px;
+    }
+    .popup-overlay.show{ display: grid; }
+
+    .popup{
+      width: min(420px, 92vw);
+      background: rgba(255,255,255,0.92);
+      border: 1px solid rgba(255,255,255,0.85);
+      border-radius: 20px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.25);
+      padding: 16px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+    }
+    .popup img{
+      width: min(280px, 70vw);
+      height: auto;
+      border-radius: 16px;
+      box-shadow: 0 14px 30px rgba(125, 0, 60, 0.22);
+      display: block;
+      margin: 6px auto 8px;
     }
   </style>
 </head>
 
 <body>
+  <div class="hearts" aria-hidden="true" id="hearts"></div>
 
   <div class="card">
     <h1>Lera, will you be my valentine? 💘</h1>
     <p class="sub">Choose wisely 😄</p>
 
-    <div class="btn-row">
-      <button id="yes">YES</button>
-      <button id="no">NO</button>
+    <div class="btn-row" id="arena">
+      <button id="yes" type="button">YES</button>
+      <button id="no" type="button">NO</button>
+    </div>
+  </div>
+
+  <!-- 5-second popup (shows every 7 NO hovers) -->
+  <div class="popup-overlay" id="popup" role="dialog" aria-modal="true">
+    <div class="popup">
+      <img src="lera.webp" alt="Lera" />
     </div>
   </div>
 
   <script>
+    const arena = document.getElementById("arena");
     const yesBtn = document.getElementById("yes");
     const noBtn  = document.getElementById("no");
+    const popup  = document.getElementById("popup");
 
-    let baseX = 0;
-    let baseY = 0;
+    let baseX = 0, baseY = 0;       // базові координати NO (поруч з YES) у межах arena
+    let hoverAttempts = 0;
+    let popupTimer = null;
 
-    function setInitialNoPosition() {
-      const yesRect = yesBtn.getBoundingClientRect();
-      const noRect  = noBtn.getBoundingClientRect();
+    function clamp(n, min, max) {
+      return Math.max(min, Math.min(max, n));
+    }
 
-      baseX = yesRect.right + 16;
-      baseY = yesRect.top + (yesRect.height / 2) - (noRect.height / 2);
+    function setNoBaseNearYes() {
+      const a = arena.getBoundingClientRect();
+      const y = yesBtn.getBoundingClientRect();
+
+      // Координати YES відносно arena
+      const yesLeft = y.left - a.left;
+      const yesTop  = y.top  - a.top;
+
+      // Поставити NO праворуч від YES по центру по висоті
+      baseX = yesLeft + yesBtn.offsetWidth + 16;
+      baseY = yesTop  + (yesBtn.offsetHeight - noBtn.offsetHeight) / 2;
+
+      // Якщо не влазить праворуч — ставимо ліворуч
+      if (baseX + noBtn.offsetWidth > arena.clientWidth - 6) {
+        baseX = yesLeft - noBtn.offsetWidth - 16;
+      }
+
+      baseX = clamp(baseX, 6, arena.clientWidth  - noBtn.offsetWidth  - 6);
+      baseY = clamp(baseY, 6, arena.clientHeight - noBtn.offsetHeight - 6);
 
       noBtn.style.left = baseX + "px";
       noBtn.style.top  = baseY + "px";
     }
 
     function moveNoNearby() {
-      const radiusX = noBtn.offsetWidth * (2 + Math.random());
-      const radiusY = noBtn.offsetHeight * (2 + Math.random());
+      // радіус 2–3 розміри кнопки від бази
+      const rx = noBtn.offsetWidth  * (2 + Math.random()); // 2..3
+      const ry = noBtn.offsetHeight * (2 + Math.random());
 
-      const offsetX = (Math.random() - 0.5) * radiusX;
-      const offsetY = (Math.random() - 0.5) * radiusY;
+      const dx = (Math.random() - 0.5) * rx;
+      const dy = (Math.random() - 0.5) * ry;
 
-      noBtn.style.left = baseX + offsetX + "px";
-      noBtn.style.top  = baseY + offsetY + "px";
+      let x = baseX + dx;
+      let y = baseY + dy;
+
+      // не даємо вилізти за межі arena
+      x = clamp(x, 6, arena.clientWidth  - noBtn.offsetWidth  - 6);
+      y = clamp(y, 6, arena.clientHeight - noBtn.offsetHeight - 6);
+
+      noBtn.style.left = x + "px";
+      noBtn.style.top  = y + "px";
     }
 
-    noBtn.addEventListener("mouseenter", moveNoNearby);
+    function showPopupFor5s() {
+      if (popupTimer) return;
+      popup.classList.add("show");
+
+      popupTimer = setTimeout(() => {
+        popup.classList.remove("show");
+        popupTimer = null;
+      }, 5000);
+    }
+
+    function onNoHover() {
+      moveNoNearby();
+
+      hoverAttempts += 1;
+      if (hoverAttempts >= 7) {
+        hoverAttempts = 0;
+        showPopupFor5s();
+      }
+    }
+
+    noBtn.addEventListener("mouseenter", onNoHover);
     noBtn.addEventListener("touchstart", (e) => {
       e.preventDefault();
-      moveNoNearby();
+      onNoHover();
     }, { passive: false });
 
-    window.addEventListener("load", setInitialNoPosition);
-    window.addEventListener("resize", setInitialNoPosition);
-
     yesBtn.addEventListener("click", () => {
-      alert("You know who to text 😉");
+      window.alert("You know who to text 😉");
     });
-  </script>
 
+    // Важливо: 2 кадри requestAnimationFrame, щоб кнопки точно мали правильні розміри
+    function initPositions() {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setNoBaseNearYes();
+        });
+      });
+    }
+
+    window.addEventListener("load", initPositions);
+    window.addEventListener("resize", initPositions);
+
+    // Decorative hearts
+    const hearts = document.getElementById("hearts");
+    const HEARTS_COUNT = 18;
+    for (let i = 0; i < HEARTS_COUNT; i++) {
+      const h = document.createElement("div");
+      h.className = "heart";
+      const size = 10 + Math.random() * 18;
+      h.style.width = `${size}px`;
+      h.style.height = `${size}px`;
+      h.style.left = `${Math.random() * 100}vw`;
+      h.style.top = `${50 + Math.random() * 80}vh`;
+      h.style.opacity = `${0.25 + Math.random() * 0.55}`;
+      h.style.animationDuration = `${6 + Math.random() * 10}s`;
+      h.style.animationDelay = `${Math.random() * 6}s`;
+      hearts.appendChild(h);
+    }
+  </script>
 </body>
 </html>
